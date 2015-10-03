@@ -13,3 +13,9 @@ persistLauncher in Test := false
 libraryDependencies ++= Seq(
   "org.scala-js" %%% "scalajs-dom" % "0.8.2"
 )
+
+jsDependencies += ProvidedJS / "benchmark.js" commonJSName "Benchmark"
+
+scalaJSStage in Global := FastOptStage
+
+scalaJSSemantics ~= { _.optimized }

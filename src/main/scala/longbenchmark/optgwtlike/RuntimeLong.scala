@@ -1,6 +1,9 @@
-package longbenchmark.gwtlike
+package longbenchmark.optgwtlike
 
 import scala.annotation.tailrec
+
+import scala.scalajs.js
+import js.DynamicImplicits.number2dynamic
 
 /**
  * emulate a Java-Long using three integers.
@@ -209,89 +212,42 @@ final class RuntimeLong(
     masked(sum0, sum1, sum2)
   }
 
-  /**
-   * subtraction
-   * note: gwt implements this individually
-   */
-  def -(y: RuntimeLong): RuntimeLong = x + (-y)
+  def -(y: RuntimeLong): RuntimeLong = {
+    val neg0 = x.l - y.l
+    val neg1 = x.m - y.m + (neg0 >> 31)
+    val neg2 = x.h - y.m + (neg1 >> 31)
+    masked(neg0, neg1, neg2)
+  }
 
-  // This assumes that BITS == 22
   def *(y: RuntimeLong): RuntimeLong = {
+    val a0 = x.l.toDouble
+    val a1 = x.m.toDouble
+    val a2 = x.h.toDouble
 
-    /** divides v in 13bit chunks */
-    @inline def chunk13(v: RuntimeLong) = (
-      v.l & 0x1fff,
-      (v.l >> 13) | ((v.m & 0xf) << 9),
-      (v.m >> 4) & 0x1fff,
-      (v.m >> 17) | ((v.h & 0xff) << 5),
-      (v.h & 0xfff00) >> 8
-    )
+    val b0 = y.l.toDouble
+    val b1 = y.m.toDouble
+    val b2 = y.h.toDouble
 
-    val (a0, a1, a2, a3, a4) = chunk13(x)
-    val (b0, b1, b2, b3, b4) = chunk13(y)
-
-    // Compute partial products
-    // Optimization: if b is small, avoid multiplying by parts that are 0
-    var p0 = a0 * b0; // << 0
-    var p1 = a1 * b0; // << 13
-    var p2 = a2 * b0; // << 26
-    var p3 = a3 * b0; // << 39
-    var p4 = a4 * b0; // << 52
+    var p0: js.Dynamic = a0 * b0
+    var p1: js.Dynamic = a1 * b0
+    var p2: js.Dynamic = a2 * b0
 
     if (b1 != 0) {
-      p1 += a0 * b1;
-      p2 += a1 * b1;
-      p3 += a2 * b1;
-      p4 += a3 * b1;
+      p1 = p1 + a0 * b1
+      p2 = p2 + a1 * b1
     }
     if (b2 != 0) {
-      p2 += a0 * b2;
-      p3 += a1 * b2;
-      p4 += a2 * b2;
-    }
-    if (b3 != 0) {
-      p3 += a0 * b3;
-      p4 += a1 * b3;
-    }
-    if (b4 != 0) {
-      p4 += a0 * b4;
+      p2 = p2 + a0 * b2
     }
 
-    // Accumulate into 22-bit chunks:
-    // .........................................c10|...................c00|
-    // |....................|..................xxxx|xxxxxxxxxxxxxxxxxxxxxx| p0
-    // |....................|......................|......................|
-    // |....................|...................c11|......c01.............|
-    // |....................|....xxxxxxxxxxxxxxxxxx|xxxxxxxxx.............| p1
-    // |....................|......................|......................|
-    // |.................c22|...............c12....|......................|
-    // |..........xxxxxxxxxx|xxxxxxxxxxxxxxxxxx....|......................| p2
-    // |....................|......................|......................|
-    // |.................c23|..c13.................|......................|
-    // |xxxxxxxxxxxxxxxxxxxx|xxxxx.................|......................| p3
-    // |....................|......................|......................|
-    // |.........c24........|......................|......................|
-    // |xxxxxxxxxxxx........|......................|......................| p4
+    p1 = p1 + ((p0 / (1 << BITS)) | 0)
+    p2 = p2 + ((p1 / (1 << BITS)) | 0)
 
-    val c00 = p0 & 0x3fffff;
-    val c01 = (p1 & 0x1ff) << 13;
-    val c0 = c00 + c01;
+    val c0 = (p0 & MASK).asInstanceOf[Int]
+    val c1 = (p1 & MASK).asInstanceOf[Int]
+    val c2 = (p2 & MASK_2).asInstanceOf[Int]
 
-    val c10 = p0 >> 22;
-    val c11 = p1 >> 9;
-    val c12 = (p2 & 0x3ffff) << 4;
-    val c13 = (p3 & 0x1f) << 17;
-    val c1 = c10 + c11 + c12 + c13;
-
-    val c22 = p2 >> 18;
-    val c23 = p3 >> 5;
-    val c24 = (p4 & 0xfff) << 8;
-    val c2 = c22 + c23 + c24;
-
-    // Propagate high bits from c0 -> c1, c1 -> c2
-    val c1n = c1 + (c0 >> BITS)
-
-    masked(c0, c1n, c2 + (c1n >> BITS))
+    new RuntimeLong(c0, c1, c2)
   }
 
   def /(y: RuntimeLong): RuntimeLong = (x divMod y)(0)

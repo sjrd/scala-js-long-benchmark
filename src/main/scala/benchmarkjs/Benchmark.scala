@@ -5,7 +5,7 @@ import js.annotation._
 
 @js.native
 @JSName("Benchmark.Suite")
-class Suite(name: String = ???) extends js.Object {
+class Suite(val name: String = ???) extends js.Object {
   def add(name: String, fn: js.Function0[_]): this.type = js.native
 
   def on(tpe: String, listener: js.Function0[_]): this.type = js.native
