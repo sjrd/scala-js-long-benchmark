@@ -16,11 +16,12 @@ object LongBenchmark extends js.JSApp {
   def main(): Unit = {
     for (i <- 0 until SampleCount) {
       val l = longs1(i)
-      val r = longs2(i)
-      val expected = optteavmlike.Build.fromLong(l * r)
-      val actual = optteavmlike.Build.fromLong(l) * optteavmlike.Build.fromLong(r)
+      //val r = longs2(i)
+      val r = scala.util.Random.nextInt().toLong
+      val expected = optteavmlike.Build.fromLong(l / r)
+      val actual = optteavmlike.Build.fromLong(l) / optteavmlike.Build.fromLong(r)
       if (expected.notEquals(actual))
-        println(s"$l * $r  expected $expected got $actual")
+        println(s"$l / $r  expected $expected got $actual")
     }
 
     doAll()
@@ -32,6 +33,7 @@ object LongBenchmark extends js.JSApp {
     plusIntValues()
     minusIntValues()
     timesIntValues()
+    divideIntValues()
   }
 
   def unaryMinus() {
@@ -151,6 +153,36 @@ object LongBenchmark extends js.JSApp {
       })
       .add("Opt TeaVM-like", { () =>
         optteavmlike1 * optteavmlike2
+      }))
+  }
+
+  def divideIntValues() {
+    val suite = new benchmarkjs.Suite("int / int")
+
+    val gwtlike1 = gwtlike.Build.fromInt(1234567892)
+    val gwtlike2 = gwtlike.Build.fromInt(987654321)
+
+    val optgwtlike1 = optgwtlike.Build.fromInt(1234567892)
+    val optgwtlike2 = optgwtlike.Build.fromInt(987654321)
+
+    val teavmlike1 = teavmlike.Build.fromInt(1234567892)
+    val teavmlike2 = teavmlike.Build.fromInt(987654321)
+
+    val optteavmlike1 = optteavmlike.Build.fromInt(1234567892)
+    val optteavmlike2 = optteavmlike.Build.fromInt(987654321)
+
+    runSuite(suite
+      .add("GWT-like", { () =>
+        gwtlike1 / gwtlike2
+      })
+      .add("Opt GWT-like", { () =>
+        optgwtlike1 / optgwtlike2
+      })
+      /*.add("TeaVM-like", { () =>
+        teavmlike1 / teavmlike2
+      })*/
+      .add("Opt TeaVM-like", { () =>
+        optteavmlike1 / optteavmlike2
       }))
   }
 
