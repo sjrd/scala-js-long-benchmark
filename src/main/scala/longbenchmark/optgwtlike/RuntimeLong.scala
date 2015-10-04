@@ -448,22 +448,19 @@ final class RuntimeLong(
       xMinValue: Boolean): scala.scalajs.js.Array[RuntimeLong] = {
     import scala.scalajs.js
 
-    @inline
-    @tailrec
-    def divide0(shift: Int, yShift: RuntimeLong, curX: RuntimeLong,
-        quot: RuntimeLong): (RuntimeLong, RuntimeLong) =
-      if (shift < 0 || curX.isZero) (quot, curX) else {
-        val newX = curX - yShift
-        if (!newX.isNegative)
-          divide0(shift-1, yShift >> 1, newX, quot.setBit(shift))
-        else
-          divide0(shift-1, yShift >> 1, curX, quot)
+    var shift = y.numberOfLeadingZeros - x.numberOfLeadingZeros
+    var yShift = y << shift
+    var absRem = x
+    var absQuot = Zero
+    while (shift >= 0 && !absRem.isZero) {
+      val newX = absRem - yShift
+      if (!newX.isNegative) {
+        absRem = newX
+        absQuot = absQuot.setBit(shift)
       }
-
-    val shift = y.numberOfLeadingZeros - x.numberOfLeadingZeros
-    val yShift = y << shift
-
-    val (absQuot, absRem) = divide0(shift, yShift, x, Zero)
+      shift -= 1
+      yShift >>= 1
+    }
 
     val quot = if (xNegative ^ yNegative) -absQuot else absQuot
     val rem  =

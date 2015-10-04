@@ -4,17 +4,156 @@ import scala.annotation.tailrec
 
 import scala.scalajs.js
 import js.JSNumberOps._
+import js.JSStringOps._
 
-class RuntimeLong(val lo: Int, val hi: Int) { a =>
+class RuntimeLong(val lo: Int, val hi: Int)
+    extends java.lang.Number with java.io.Serializable
+    with java.lang.Comparable[java.lang.Long] { a =>
+
   import RuntimeLong._
   import Build._
 
-  def notEquals(b: RuntimeLong): Boolean =
-    a.lo != b.lo || a.hi != b.hi
+  /** Constructs a Long from an Int. */
+  def this(value: Int) = this(value, value >> 31)
+
+  // Universal equality
+
+  override def equals(that: Any): Boolean = that match {
+    case b: RuntimeLong => inline_equals(b)
+    case _              => false
+  }
+
+  override def hashCode(): Int =
+    lo ^ hi
+
+  // String operations
 
   override def toString(): String = {
-    "(" + lo + ", " + hi + ")"
+    if (isInt32) {
+      lo.toString()
+    } else if (isNegative) {
+      // Check for MinValue, because its not negatable
+      if (isMinValue) "-9223372036854775808"
+      else "-" + longToString(-a)
+    } else {
+      longToString(a)
+    }
   }
+
+  @inline private def isInt32: Boolean = hi == (lo >> 31)
+
+  private def longToString(a: RuntimeLong): String = {
+    val tenPow9 = TenPow9 // local copy to access the companion module only once
+
+    var v = a
+    var acc = ""
+    while (true) {
+      val quotRem = v.divMod(tenPow9)
+      val quot = quotRem(0)
+      val rem = quotRem(1)
+
+      val digits = rem.toInt.toString
+
+      if (quot.isZero) {
+        return digits + acc
+      }
+
+      val zeroPrefix =
+        "000000000".jsSubstring(digits.length) // (9 - digits.length) zeros
+
+      v = quot
+      acc = zeroPrefix + digits + acc
+    }
+
+    throw new AssertionError("dead code")
+  }
+
+  // Conversions
+
+  def toByte: Byte = lo.toByte
+  def toShort: Short = lo.toShort
+  def toChar: Char = lo.toChar
+  def toInt: Int = lo
+  def toLong: Long = this.asInstanceOf[Long]
+  def toFloat: Float = toDouble.toFloat
+
+  def toDouble: Double = {
+    if (isNegative) {
+      if (isMinValue) {
+        -9223372036854775808.0
+      } else {
+        val (abslo, abshi) = inline_unary_-(lo, hi)
+        -(abslo + abshi * TwoPow32)
+      }
+    } else {
+      lo + hi * TwoPow32
+    }
+  }
+
+  // java.lang.Number
+
+  override def byteValue(): Byte = toByte
+  override def shortValue(): Short = toShort
+  def intValue(): Int = toInt
+  def longValue(): Long = toLong
+  def floatValue(): Float = toFloat
+  def doubleValue(): Double = toDouble
+
+  // Comparisons and java.lang.Comparable interface
+
+  def compareTo(b: RuntimeLong): Int = {
+    val ahi = a.hi
+    val bhi = b.hi
+    if (ahi == bhi) {
+      a.lo.compareTo(b.lo)
+    } else {
+      if (ahi < bhi) -1
+      else 1
+    }
+  }
+
+  def compareTo(that: java.lang.Long): Int =
+    compareTo(that.asInstanceOf[RuntimeLong])
+
+  @inline
+  private def inline_equals(b: RuntimeLong): Boolean =
+    a.lo == b.lo && a.hi == b.hi
+
+  @noinline
+  def equals(b: RuntimeLong): Boolean = inline_equals(b)
+
+  @noinline
+  def notEquals(b: RuntimeLong): Boolean = !inline_equals(b)
+
+  def <(b: RuntimeLong): Boolean = {
+    val ahi = a.hi
+    val bhi = b.hi
+    if (ahi == bhi) a.lo.toUint < b.lo.toUint
+    else ahi < bhi
+  }
+
+  def <=(b: RuntimeLong): Boolean = {
+    val ahi = a.hi
+    val bhi = b.hi
+    if (ahi == bhi) a.lo.toUint <= b.lo.toUint
+    else ahi < bhi
+  }
+
+  def >(b: RuntimeLong): Boolean = {
+    val ahi = a.hi
+    val bhi = b.hi
+    if (ahi == bhi) a.lo.toUint > b.lo.toUint
+    else ahi > bhi
+  }
+
+  def >=(b: RuntimeLong): Boolean = {
+    val ahi = a.hi
+    val bhi = b.hi
+    if (ahi == bhi) a.lo.toUint >= b.lo.toUint
+    else ahi > bhi
+  }
+
+  // Logic/bitwise operations
 
   @inline
   private def inline_~ : RuntimeLong =
@@ -23,15 +162,14 @@ class RuntimeLong(val lo: Int, val hi: Int) { a =>
   @noinline
   def unary_~ : RuntimeLong = inline_~
 
-  @inline
-  private def inline_inc: RuntimeLong = {
-    val lo = a.lo + 1
-    new RuntimeLong(lo, hi + (if (lo == 0) 1 else 0))
-  }
+  def |(b: RuntimeLong): RuntimeLong =
+    new RuntimeLong(a.lo | b.lo, a.hi | b.hi)
 
-  @inline
-  def inline_unary_-(lo: Int, hi: Int): (Int, Int) =
-    (-lo, ~hi + (if (lo == 0) 1 else 0))
+  def &(b: RuntimeLong): RuntimeLong =
+    new RuntimeLong(a.lo & b.lo, a.hi & b.hi)
+
+  def ^(b: RuntimeLong): RuntimeLong =
+    new RuntimeLong(a.lo ^ b.lo, a.hi ^ b.hi)
 
   /** Shift left */
   def <<(n0: Int): RuntimeLong = {
@@ -63,9 +201,24 @@ class RuntimeLong(val lo: Int, val hi: Int) { a =>
     else new RuntimeLong(hi >> n, hi >> 31)
   }
 
+  // Arithmetic operations
+
+  @noinline
+  def unary_+ : RuntimeLong = this
+
   @noinline
   def unary_- : RuntimeLong =
     fromPair(inline_unary_-(lo, hi))
+
+  @inline
+  def inline_unary_-(lo: Int, hi: Int): (Int, Int) =
+    (-lo, ~hi + (if (lo == 0) 1 else 0))
+
+  @inline
+  private def inline_inc: RuntimeLong = {
+    val lo = a.lo + 1
+    new RuntimeLong(lo, hi + (if (lo == 0) 1 else 0))
+  }
 
   def +(b: RuntimeLong): RuntimeLong = {
     val alo = a.lo
@@ -114,65 +267,10 @@ class RuntimeLong(val lo: Int, val hi: Int) { a =>
     new RuntimeLong(
         (c0 & 0xFFFF) | (c1 << 16),
         (c2 & 0xFFFF) | (c3 << 16))
-
-    /*import js.DynamicImplicits.number2dynamic
-
-    val Mask10 = (1 << 10) - 1
-    val Mask12 = (1 << 12) - 1
-    val Mask20 = (1 << 20) - 1
-    val Mask22 = (1 << 22) - 1
-
-    val a0 = (a.lo & Mask22).toDouble
-    val a1 = ((a.lo >>> 22) | ((a.hi & Mask12) << 10)).toDouble
-    val a2 = (a.hi >>> 12).toDouble
-
-    val b0 = (b.lo & Mask22).toDouble
-    val b1 = ((b.lo >>> 22) | ((b.hi & Mask12) << 10)).toDouble
-    val b2 = (b.hi >>> 12).toDouble
-
-    var p0: js.Dynamic = a0 * b0
-    var p1: js.Dynamic = a1 * b0
-    var p2: js.Dynamic = a2 * b0
-
-    if (b1 != 0) {
-      p1 = p1 + a0 * b1
-      p2 = p2 + a1 * b1
-    }
-    if (b2 != 0) {
-      p2 = p2 + a0 * b2
-    }
-
-    p1 = p1 + ((p0 / (1 << 22)) | 0)
-    p2 = p2 + ((p1 / (1 << 22)) | 0)
-
-    val c0 = (p0 & Mask22).asInstanceOf[Int]
-    val c1 = (p1 & Mask22).asInstanceOf[Int]
-    val c2 = (p2 & Mask20).asInstanceOf[Int]
-
-    new RuntimeLong(
-        c0 | (c1 << 22),
-        (c1 >>> 10) | (c2 << 12))*/
   }
 
   def /(b: RuntimeLong): RuntimeLong = divMod(b)(0)
   def %(b: RuntimeLong): RuntimeLong = divMod(b)(1)
-
-  def compareTo(b: RuntimeLong): Int = {
-    val ahi = a.hi
-    val bhi = b.hi
-    if (ahi == bhi) {
-      a.lo.compareTo(b.lo)
-    } else {
-      if (ahi < bhi) -1
-      else 1
-    }
-  }
-
-  def <(b: RuntimeLong): Boolean = {
-    val ahi = a.hi
-    val bhi = b.hi
-    (ahi < bhi) || (ahi == bhi && a.lo < b.lo)
-  }
 
   // helpers //
 
@@ -181,19 +279,10 @@ class RuntimeLong(val lo: Int, val hi: Int) { a =>
   @inline private def isNegative = hi < 0
   @inline private def abs = if (isNegative) -a else a
 
-  def signum: RuntimeLong =
-    if (isNegative) MinusOne else if (isZero) Zero else One
-
-  def numberOfLeadingZeros: Int = {
+  @inline private def numberOfLeadingZeros: Int = {
     val hi = this.hi
     if (hi != 0) Integer.numberOfLeadingZeros(hi)
     else Integer.numberOfLeadingZeros(lo) + 32
-  }
-
-  def numberOfTrailingZeros: Int = {
-    val lo = this.lo
-    if (lo != 0) Integer.numberOfTrailingZeros(lo)
-    else Integer.numberOfTrailingZeros(hi) + 32
   }
 
   /** return log_2(x) if power of 2 or -1 otherwise */
@@ -207,7 +296,7 @@ class RuntimeLong(val lo: Int, val hi: Int) { a =>
     val hi = this.hi
 
     if (hi == 0 && isPowerOfTwo(lo)) log2OfPowerOfTwo(lo)
-    if (lo == 0 && isPowerOfTwo(hi)) log2OfPowerOfTwo(hi)
+    else if (lo == 0 && isPowerOfTwo(hi)) log2OfPowerOfTwo(hi)
     else -1
   }
 
@@ -317,4 +406,5 @@ object RuntimeLong {
   final val MinusOne = new RuntimeLong(-1, -1)
   final val MinValue = new RuntimeLong(0, 0x80000000)
   final val MaxValue = new RuntimeLong(0xffffffff, 0x7fffffff)
+  final val TenPow9 = new RuntimeLong(1000000000, 0) // 1000000000L with 9 zeros
 }
