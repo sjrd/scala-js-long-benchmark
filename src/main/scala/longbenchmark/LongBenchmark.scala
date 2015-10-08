@@ -17,8 +17,8 @@ object LongBenchmark extends js.JSApp {
   def main(): Unit = {
     for (i <- 0 until SampleCount) {
       val l = longs1(i)
-      //val r = longs2(i)
-      val r = scala.util.Random.nextInt().toLong
+      val r = longs2(i)
+      //val r = scala.util.Random.nextInt().toLong
       val expected = optteavmlike.Build.fromLong(l / r)
       val actual = optteavmlike.Build.fromLong(l) / optteavmlike.Build.fromLong(r)
       if (expected.notEquals(actual))

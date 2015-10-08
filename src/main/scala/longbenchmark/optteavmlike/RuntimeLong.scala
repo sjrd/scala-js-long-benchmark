@@ -40,7 +40,9 @@ class RuntimeLong(val lo: Int, val hi: Int)
     }
   }
 
-  @inline private def isInt32: Boolean = hi == (lo >> 31)
+  @inline private def isInt32: Boolean = isInt32(lo, hi)
+
+  @inline private def isInt32(lo: Int, hi: Int): Boolean = hi == (lo >> 31)
 
   private def longToString(a: RuntimeLong): String = {
     val tenPow9 = TenPow9 // local copy to access the companion module only once
@@ -212,7 +214,7 @@ class RuntimeLong(val lo: Int, val hi: Int)
 
   @inline
   def inline_unary_-(lo: Int, hi: Int): (Int, Int) =
-    (-lo, ~hi + (if (lo == 0) 1 else 0))
+    (-lo, if (lo != 0) ~hi else -hi)
 
   @inline
   private def inline_inc: RuntimeLong = {
@@ -269,8 +271,52 @@ class RuntimeLong(val lo: Int, val hi: Int)
         (c2 & 0xFFFF) | (c3 << 16))
   }
 
-  def /(b: RuntimeLong): RuntimeLong = divMod(b)(0)
-  def %(b: RuntimeLong): RuntimeLong = divMod(b)(1)
+  def /(b: RuntimeLong): RuntimeLong = {
+    val alo = a.lo
+    val ahi = a.hi
+    val blo = b.lo
+    val bhi = b.hi
+
+    if (isInt32(alo, ahi)) {
+      if (isInt32(blo, bhi)) {
+        if (alo == Int.MinValue && blo == -1) a
+        else new RuntimeLong(alo / blo)
+      } else {
+        // Either a == Int.MinValue && b == (Int.MaxValue + 1), or (abs(b) > abs(a))
+        if (alo == Int.MinValue && (blo == 0x80000000 && bhi == 0)) One
+        else Zero // because abs(b) > abs(a)
+      }
+    } else {
+      val aPos = ahi >= 0
+      val aAbsHi = if (aPos) ahi else if (alo != 0) ~ahi else -ahi
+      if ((aAbsHi & 0xffe00000) == 0) {
+        // abs(a) < 2^53, so it's a safe Double
+        val bPos = bhi >= 0
+        val bAbsHi = if (bPos) bhi else if (blo != 0) ~bhi else -bhi
+        if ((bAbsHi & 0xffe00000) == 0) {
+          // oh, abs(b) too!
+          val aAbsLo = if (aPos) alo else -alo
+          val bAbsLo = if (bPos) blo else -blo
+          val aAbsDouble = aAbsHi * TwoPow32 + aAbsLo.toUint
+          val bAbsDouble = bAbsHi * TwoPow32 + bAbsLo.toUint
+          val rAbsDouble = aAbsDouble / bAbsDouble
+          val rAbsLo = rawToInt(rAbsDouble)
+          val rAbsHi = rawToInt(rAbsDouble / TwoPow32)
+          if (aPos == bPos) new RuntimeLong(rAbsLo, rAbsHi)
+          else fromPair(inline_unary_-(rAbsLo, rAbsHi))
+        } else {
+          Zero // because abs(b) > abs(a)
+        }
+      } else {
+        // abs(a) is not a safe Double, we'll have to use the very slow path
+        divMod(b)(0)
+      }
+    }
+  }
+
+  def %(b: RuntimeLong): RuntimeLong = {
+    divMod(b)(1)
+  }
 
   // helpers //
 
