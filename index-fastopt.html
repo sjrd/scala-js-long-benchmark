@@ -1,19 +1,73 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-  <title>Scala.js Long benchmarks</title>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <title>Scala.js Long benchmarks</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+
 </head>
+
 <body>
+    <div class="container">
+        <h1>Scala.js Long benchmarks</h1>
 
-<h1>Scala.js Long benchmarks</h1>
+        <table class="table">
+            <th>
+                <td>+</td>
+                <td>-</td>
+                <td>*</td>
+                <td>/</td>
+            </th>
+            <tr>
+                <td>
+                    Google Webkit Tool
+                </td>
+                <td id="gwt-plus">No Data</td>
+                <td id="gwt-minus">No Data</td>
+                <td id="gwt-times">No Data</td>
+                <td id="gwt-div">No Data</td>
+            </tr>
+            <tr>
+                <td>
+                    Opt Google Webkit Tool
+                </td>
+                <td id="optgwt-plus">No Data</td>
+                <td id="optgwt-minus">No Data</td>
+                <td id="optgwt-times">No Data</td>
+                <td id="optgwt-div">No Data</td>
+            </tr>
+            <tr>
+                <td>
+                    Tea VM
+                </td>
+                <td id="teavm-plus">No Data</td>
+                <td id="teavm-minus">No Data</td>
+                <td id="teavm-times">No Data</td>
+                <td id="teavm-div">No Data</td>
+            </tr>
+            <tr>
+                <td>
+                    Opt Tea VM
+                </td>
+                <td id="optteavm-plus">No Data</td>
+                <td id="optteavm-minus">No Data</td>
+                <td id="optteavm-times">No Data</td>
+                <td id="optteavm-div">No Data</td>
+            </tr>
+        </table>
 
-<div id="playground">
-</div>
+        <div id="playground">
+        </div>
+    </div>
 
-<script type="text/javascript" src="./src/main/resources/benchmark.js"></script>
-<script type="text/javascript" src="./target/scala-2.11/scalajs-long-benchmark-fastopt.js"></script>
-<script type="text/javascript" src="./target/scala-2.11/scalajs-long-benchmark-launcher.js"></script>
+    <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="./src/main/resources/benchmark.js"></script>
+    <script type="text/javascript" src="./target/scala-2.11/scalajs-long-benchmark-fastopt.js"></script>
+    <script type="text/javascript" src="./target/scala-2.11/scalajs-long-benchmark-launcher.js"></script>
 
 </body>
+
 </html>
