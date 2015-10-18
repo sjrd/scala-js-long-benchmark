@@ -11,7 +11,8 @@ persistLauncher in Compile := true
 persistLauncher in Test := false
 
 libraryDependencies ++= Seq(
-  "org.scala-js" %%% "scalajs-dom" % "0.8.2"
+  "org.scala-js" %%% "scalajs-dom" % "0.8.2",
+  "com.storm-enroute" %%% "scalameter" % "0.1-SNAPSHOT"
 )
 
 jsDependencies += ProvidedJS / "benchmark.js" commonJSName "Benchmark"

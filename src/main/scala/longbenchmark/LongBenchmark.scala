@@ -4,7 +4,7 @@ import scala.scalajs.js
 import js.annotation._
 import org.scalajs.dom
 
-object LongBenchmark extends js.JSApp {
+object LongBenchmark /*extends js.JSApp*/ {
   val isBrowser = !js.isUndefined(js.Dynamic.global.window)
 
   final val SampleCount = 1000
