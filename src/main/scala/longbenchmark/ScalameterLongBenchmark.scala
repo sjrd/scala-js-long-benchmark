@@ -7,6 +7,7 @@ import org.scalameter.api._
 import org.scalameter.picklers.noPickler._
 import org.scalameter.utils.Tree
 import org.scalameter.CurveData
+import scala.scalajs.js.timers.SetTimeoutHandle
 
 /**
  * @author dengels
@@ -47,7 +48,7 @@ object ScalameterLongBenchmark extends js.JSApp {
           }
         }
       }
-      
+
       measure method "times" in {
         using(sample) in { numbers =>
           numbers.foreach {
@@ -56,7 +57,7 @@ object ScalameterLongBenchmark extends js.JSApp {
           }
         }
       }
-      
+
       measure method "div" in {
         using(sample) in { numbers =>
           numbers.foreach {
@@ -66,7 +67,7 @@ object ScalameterLongBenchmark extends js.JSApp {
         }
       }
     }
-    
+
     // Optimized Google Web Toolkit
     performance of "optgwt" in {
       measure method "plus" in {
@@ -86,7 +87,7 @@ object ScalameterLongBenchmark extends js.JSApp {
           }
         }
       }
-      
+
       measure method "times" in {
         using(sample) in { numbers =>
           numbers.foreach {
@@ -95,7 +96,7 @@ object ScalameterLongBenchmark extends js.JSApp {
           }
         }
       }
-      
+
       measure method "div" in {
         using(sample) in { numbers =>
           numbers.foreach {
@@ -105,7 +106,7 @@ object ScalameterLongBenchmark extends js.JSApp {
         }
       }
     }
-    
+
     // Tea VM
     performance of "teavm" in {
       measure method "plus" in {
@@ -125,7 +126,7 @@ object ScalameterLongBenchmark extends js.JSApp {
           }
         }
       }
-      
+
       measure method "times" in {
         using(sample) in { numbers =>
           numbers.foreach {
@@ -134,7 +135,7 @@ object ScalameterLongBenchmark extends js.JSApp {
           }
         }
       }
-      
+
       /*measure method "div" in {
         using(sample) in { numbers =>
           numbers.foreach {
@@ -144,7 +145,7 @@ object ScalameterLongBenchmark extends js.JSApp {
         }
       }*/
     }
-    
+
     // Optimized Tea VM
     performance of "optteavm" in {
       measure method "plus" in {
@@ -164,7 +165,7 @@ object ScalameterLongBenchmark extends js.JSApp {
           }
         }
       }
-      
+
       measure method "times" in {
         using(sample) in { numbers =>
           numbers.foreach {
@@ -173,7 +174,7 @@ object ScalameterLongBenchmark extends js.JSApp {
           }
         }
       }
-      
+
       measure method "div" in {
         using(sample) in { numbers =>
           numbers.foreach {
@@ -203,13 +204,18 @@ object ScalameterLongBenchmark extends js.JSApp {
           val result = x.value + x.units
           println(s"$axisData : $result")
         }
-        
+
         val measure = math.round(measurements.head.value * 100) / 100
         val units = measurements.head.units
-        
+
         val id = ctx.scopeList.mkString("-")
         println(s"id = $id")
         dom.document.getElementById(id).innerHTML = s"$measure $units"
+        js.Dynamic.global.$.apply(dom.window).trigger("resize")
+        dom.document.getElementById("results").asInstanceOf[js.Dynamic].style.display = "none";
+        println(dom.document.getElementById("results").asInstanceOf[js.Dynamic].offsetWidth)
+        dom.document.getElementById("results").asInstanceOf[js.Dynamic].style.display = "block";
+        println(dom.document.getElementById("results").asInstanceOf[js.Dynamic].offsetWidth)
       }
 
       def report(results: Tree[CurveData[Double]], persistor: Persistor): Boolean = {
