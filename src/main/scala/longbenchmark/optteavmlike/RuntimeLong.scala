@@ -279,7 +279,7 @@ class RuntimeLong(val lo: Int, val hi: Int)
 
     if (isInt32(alo, ahi)) {
       if (isInt32(blo, bhi)) {
-        if (alo == Int.MinValue && blo == -1) a
+        if (alo == Int.MinValue && blo == -1) new RuntimeLong(Int.MinValue, 0)
         else new RuntimeLong(alo / blo)
       } else {
         // Either a == Int.MinValue && b == (Int.MaxValue + 1), or (abs(b) > abs(a))

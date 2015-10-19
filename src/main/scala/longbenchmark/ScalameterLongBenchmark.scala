@@ -25,6 +25,7 @@ object ScalameterLongBenchmark extends js.JSApp {
     final class OptGWTPair(val a: optgwtlike.RuntimeLong, val b: optgwtlike.RuntimeLong)
     final class TeaVMPair(val a: teavmlike.RuntimeLong, val b: teavmlike.RuntimeLong)
     final class OptTeaVMPair(val a: optteavmlike.RuntimeLong, val b: optteavmlike.RuntimeLong)
+    final class TheOnePair(val a: theone.RuntimeLong, val b: theone.RuntimeLong)
 
     val longSample = {
       (for {
@@ -47,6 +48,10 @@ object ScalameterLongBenchmark extends js.JSApp {
 
     val optteavmSample = Gen.unit("optteavm").map(_ => longSample.map {
       case (i, j) => new OptTeaVMPair(optteavmlike.Build.fromLong(i), optteavmlike.Build.fromLong(j))
+    }).cached
+
+    val theoneSample = Gen.unit("theone").map(_ => longSample.map {
+      case (i, j) => new TheOnePair(theone.Build.fromLong(i), theone.Build.fromLong(j))
     }).cached
 
     // Google Web Toolkit
@@ -79,6 +84,14 @@ object ScalameterLongBenchmark extends js.JSApp {
         using(gwtSample) in { numbers =>
           numbers.foreach { pair =>
             pair.a / pair.b
+          }
+        }
+      }
+
+      measure method "toString" in {
+        using(gwtSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a.toString()
           }
         }
       }
@@ -117,6 +130,14 @@ object ScalameterLongBenchmark extends js.JSApp {
           }
         }
       }
+
+      measure method "toString" in {
+        using(optgwtSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a.toString()
+          }
+        }
+      }
     }
 
     // Tea VM
@@ -152,6 +173,14 @@ object ScalameterLongBenchmark extends js.JSApp {
           }
         }
       }*/
+
+      /*measure method "toString" in {
+        using(teavmSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a.toString()
+          }
+        }
+      }*/
     }
 
     // Optimized Tea VM
@@ -184,6 +213,57 @@ object ScalameterLongBenchmark extends js.JSApp {
         using(optteavmSample) in { numbers =>
           numbers.foreach { pair =>
             pair.a / pair.b
+          }
+        }
+      }
+
+      measure method "toString" in {
+        using(optteavmSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a.toString()
+          }
+        }
+      }
+    }
+
+    // The One
+    performance of "theone" in {
+      measure method "plus" in {
+        using(theoneSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a + pair.b
+          }
+        }
+      }
+
+      measure method "minus" in {
+        using(theoneSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a - pair.b
+          }
+        }
+      }
+
+      measure method "times" in {
+        using(theoneSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a * pair.b
+          }
+        }
+      }
+
+      measure method "div" in {
+        using(theoneSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a / pair.b
+          }
+        }
+      }
+
+      measure method "toString" in {
+        using(theoneSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a.toString()
           }
         }
       }
