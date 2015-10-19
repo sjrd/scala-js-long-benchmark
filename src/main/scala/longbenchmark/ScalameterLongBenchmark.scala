@@ -2,12 +2,12 @@ package longbenchmark
 
 import scala.scalajs.js
 import js.annotation._
+import js.JSConverters._
 import org.scalajs.dom
 import org.scalameter.api._
 import org.scalameter.picklers.noPickler._
 import org.scalameter.utils.Tree
 import org.scalameter.CurveData
-import scala.scalajs.js.timers.SetTimeoutHandle
 
 /**
  * @author dengels
@@ -21,48 +21,64 @@ object ScalameterLongBenchmark extends js.JSApp {
     //val teavmLong = Gen.single("teavm")(teavmlike.Build.fromLong _)
     //val optteavmLong = Gen.single("optteavm")(optteavmlike.Build.fromLong _)
 
-    val sample: Gen[Seq[(Long, Long)]] = Gen.unit("sample1").map {
-      _ =>
-        for (
-          i <- 1L to 1000L;
-          j <- (Long.MaxValue - 1000) to Long.MaxValue
-        ) yield (i, j)
+    final class GWTPair(val a: gwtlike.RuntimeLong, val b: gwtlike.RuntimeLong)
+    final class OptGWTPair(val a: optgwtlike.RuntimeLong, val b: optgwtlike.RuntimeLong)
+    final class TeaVMPair(val a: teavmlike.RuntimeLong, val b: teavmlike.RuntimeLong)
+    final class OptTeaVMPair(val a: optteavmlike.RuntimeLong, val b: optteavmlike.RuntimeLong)
+
+    val longSample = {
+      (for {
+        i <- 1L to 1000L
+        j <- (Long.MaxValue - 1000) to Long.MaxValue
+      } yield (j, i)).toJSArray
     }
+
+    val gwtSample = Gen.unit("gwt").map(_ => longSample.map {
+      case (i, j) => new GWTPair(gwtlike.Build.fromLong(i), gwtlike.Build.fromLong(j))
+    }).cached
+
+    val optgwtSample = Gen.unit("optgwt").map(_ => longSample.map {
+      case (i, j) => new OptGWTPair(optgwtlike.Build.fromLong(i), optgwtlike.Build.fromLong(j))
+    }).cached
+
+    val teavmSample = Gen.unit("teavm").map(_ => longSample.map {
+      case (i, j) => new TeaVMPair(teavmlike.Build.fromLong(i), teavmlike.Build.fromLong(j))
+    }).cached
+
+    val optteavmSample = Gen.unit("optteavm").map(_ => longSample.map {
+      case (i, j) => new OptTeaVMPair(optteavmlike.Build.fromLong(i), optteavmlike.Build.fromLong(j))
+    }).cached
 
     // Google Web Toolkit
     performance of "gwt" in {
       measure method "plus" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              gwtlike.Build.fromLong(a) + gwtlike.Build.fromLong(b)
+        using(gwtSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a + pair.b
           }
         }
       }
 
       measure method "minus" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              gwtlike.Build.fromLong(a) - gwtlike.Build.fromLong(b)
+        using(gwtSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a - pair.b
           }
         }
       }
 
       measure method "times" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              gwtlike.Build.fromLong(a) * gwtlike.Build.fromLong(b)
+        using(gwtSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a * pair.b
           }
         }
       }
 
       measure method "div" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              gwtlike.Build.fromLong(a) / gwtlike.Build.fromLong(b)
+        using(gwtSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a / pair.b
           }
         }
       }
@@ -71,37 +87,33 @@ object ScalameterLongBenchmark extends js.JSApp {
     // Optimized Google Web Toolkit
     performance of "optgwt" in {
       measure method "plus" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              optgwtlike.Build.fromLong(a) + optgwtlike.Build.fromLong(b)
+        using(optgwtSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a + pair.b
           }
         }
       }
 
       measure method "minus" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              optgwtlike.Build.fromLong(a) - optgwtlike.Build.fromLong(b)
+        using(optgwtSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a - pair.b
           }
         }
       }
 
       measure method "times" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              optgwtlike.Build.fromLong(a) * optgwtlike.Build.fromLong(b)
+        using(optgwtSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a * pair.b
           }
         }
       }
 
       measure method "div" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              optgwtlike.Build.fromLong(a) / optgwtlike.Build.fromLong(b)
+        using(optgwtSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a / pair.b
           }
         }
       }
@@ -110,37 +122,33 @@ object ScalameterLongBenchmark extends js.JSApp {
     // Tea VM
     performance of "teavm" in {
       measure method "plus" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              teavmlike.Build.fromLong(a) + teavmlike.Build.fromLong(b)
+        using(teavmSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a + pair.b
           }
         }
       }
 
       measure method "minus" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              teavmlike.Build.fromLong(a) - teavmlike.Build.fromLong(b)
+        using(teavmSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a - pair.b
           }
         }
       }
 
       measure method "times" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              teavmlike.Build.fromLong(a) * teavmlike.Build.fromLong(b)
+        using(teavmSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a * pair.b
           }
         }
       }
 
       /*measure method "div" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              teavm.Build.fromLong(a) / teavm.Build.fromLong(b)
+        using(teavmSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a / pair.b
           }
         }
       }*/
@@ -149,37 +157,33 @@ object ScalameterLongBenchmark extends js.JSApp {
     // Optimized Tea VM
     performance of "optteavm" in {
       measure method "plus" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              optteavmlike.Build.fromLong(a) + optteavmlike.Build.fromLong(b)
+        using(optteavmSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a + pair.b
           }
         }
       }
 
       measure method "minus" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              optteavmlike.Build.fromLong(a) - optteavmlike.Build.fromLong(b)
+        using(optteavmSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a - pair.b
           }
         }
       }
 
       measure method "times" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              optteavmlike.Build.fromLong(a) * optteavmlike.Build.fromLong(b)
+        using(optteavmSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a * pair.b
           }
         }
       }
 
       measure method "div" in {
-        using(sample) in { numbers =>
-          numbers.foreach {
-            case (a, b) =>
-              optteavmlike.Build.fromLong(a) / optteavmlike.Build.fromLong(b)
+        using(optteavmSample) in { numbers =>
+          numbers.foreach { pair =>
+            pair.a / pair.b
           }
         }
       }
